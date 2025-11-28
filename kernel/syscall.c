@@ -16,7 +16,7 @@ void clear_screen() {
     }
     cursor_x = 0;
     cursor_y = 0;
-}a
+}
 
 void kprint(const char* str) {
     volatile char* vga = (volatile char*)VGA_ADDRESS;
