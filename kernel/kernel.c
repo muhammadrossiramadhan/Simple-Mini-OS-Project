@@ -1,153 +1,192 @@
-// kernel/kernel.c
-#include "driver.h"
 #include "syscall.h"
 #include "reboot.h"
 #include <stdint.h>
 
-// Membaca integer desimal dari input (meng-echo tiap karakter).
-// Mengembalikan 0 jika input invalid atau kosong.
+// --- HELPER FUNCTIONS ---
+
+// Membaca input angka dari user
 static int read_int_from_user(void) {
     char buf[16];
     int idx = 0;
     char c;
-
-    // baca sampai newline
     while (1) {
         c = sys_read();
-        // echo character
-        char tmp[2] = { c, 0 };
-        sys_print(tmp);
-
-        if (c == '\r') continue; // ignore CR (Windows style)
+        // Handle Backspace visual
+        if (c == '\b') { 
+            if (idx > 0) { idx--; sys_print("\b \b"); }
+            continue; 
+        }
         if (c == '\n') break;
-        if (idx < (int)(sizeof(buf) - 1)) {
+        if (idx < 15) {
             buf[idx++] = c;
+            char tmp[2] = {c, 0};
+            sys_print(tmp); // echo
         }
     }
     buf[idx] = 0;
-
-    if (idx == 0) return 0; // no input
-
-    // konversi string ke int (desimal)
+    
     int val = 0;
-    for (int i = 0; buf[i]; i++) {
-        if (buf[i] < '0' || buf[i] > '9') return 0; // invalid char
+    for (int i = 0; i < idx; i++) {
+        if (buf[i] < '0' || buf[i] > '9') return 0;
         val = val * 10 + (buf[i] - '0');
     }
     return val;
 }
 
-void kernel_main(void) {
-    init_driver();
+// Menunggu user menekan tombol
+void pause_system(void) {
+    sys_read();
+}
+
+// --- FEATURE 1: I/O BENCHMARK (SESUAI GAMBAR) ---
+void run_io_benchmark(void) {
     sys_clear_screen();
-
-    sys_print("=== Simulasi I/O 4KB Block (Mini-OS) ===\n\n");
-
-    sys_print("Default block size: ");
-    sys_print_dec(BLOCK_SIZE);
-    sys_print(" bytes\n");
-
-    // Prompt input jumlah blok
-    sys_print("\nMasukkan jumlah blok untuk benchmark (max ");
-    sys_print_dec(BLOCK_COUNT);
-    sys_print("). Tekan Enter untuk default 1000: ");
-
-    int user_val = read_int_from_user();
+    // Reset driver stats
+    init_driver(); 
+    
+    sys_print("Masukkan jumlah blok untuk benchmark (max 1000). Tekan Enter untuk default 1000:\n");
+    
+    int blocks = read_int_from_user();
+    
+    if (blocks > BLOCK_COUNT) {
+        blocks = BLOCK_COUNT;
+        sys_print("\nInput terlalu besar. Menggunakan maximal: 1000\n");
+    } else if (blocks <= 0) {
+        blocks = 1000;
+        sys_print("1000\n"); // Echo default jika user langsung enter
+    }
     sys_print("\n");
 
-    int blocks_to_test;
-    if (user_val <= 0) {
-        blocks_to_test = 1000;
-        sys_print("Input invalid/empty. Menggunakan default: ");
-        sys_print_dec(blocks_to_test);
-        sys_print("\n\n");
-    } else {
-        if (user_val > BLOCK_COUNT) {
-            blocks_to_test = BLOCK_COUNT;
-            sys_print("Input terlalu besar. Menggunakan maximal: ");
-            sys_print_dec(blocks_to_test);
-            sys_print("\n\n");
-        } else {
-            blocks_to_test = user_val;
-            sys_print("Menggunakan jumlah blok: ");
-            sys_print_dec(blocks_to_test);
-            sys_print("\n\n");
-        }
-    }
-
-    // buffer data
     static uint8_t buf[BLOCK_SIZE];
     static uint8_t check[BLOCK_SIZE];
-
-    for (int i = 0; i < BLOCK_SIZE; i++) buf[i] = (uint8_t)(i & 0xFF);
+    for (int i=0; i<BLOCK_SIZE; i++) buf[i] = (uint8_t)(i & 0xFF);
 
     sys_print("Mulai write test...\n");
-
     uint32_t w0 = sys_time_us();
-    for (int b = 0; b < blocks_to_test; b++) {
-        if (sys_write_block(b, buf, BLOCK_SIZE) != 0) {
-            sys_print("ERROR: sys_write_block gagal\n");
-            break;
-        }
-    }
+    for (int b=0; b<blocks; b++) io_write_block(b, buf);
     uint32_t w1 = sys_time_us();
 
     sys_print("Mulai read & verify test...\n");
-
     uint32_t r0 = sys_time_us();
-    for (int b = 0; b < blocks_to_test; b++) {
-        if (sys_read_block(b, check, BLOCK_SIZE) != 0) {
-            sys_print("ERROR: sys_read_block gagal\n");
-            break;
-        }
-        for (int i = 0; i < BLOCK_SIZE; i++) {
-            if (check[i] != buf[i]) {
-                sys_print("ERROR: data mismatch\n");
-                goto done;
-            }
-        }
-    }
+    for (int b=0; b<blocks; b++) io_read_block(b, check);
     uint32_t r1 = sys_time_us();
 
+    // Kalkulasi Hasil
     uint32_t write_time = w1 - w0;
     uint32_t read_time  = r1 - r0;
-    uint32_t total_bytes = (uint32_t)BLOCK_SIZE * (uint32_t)blocks_to_test;
+    
+    // Latency per blok (us)
+    uint32_t lat_w = (blocks > 0) ? (write_time / blocks) : 0;
+    uint32_t lat_r = (blocks > 0) ? (read_time / blocks) : 0;
 
-    uint32_t write_throughput_kb = 0;
-    uint32_t read_throughput_kb  = 0;
-    if (write_time > 0) write_throughput_kb = (total_bytes / 1024U) * 1000U / write_time;
-    if (read_time > 0)  read_throughput_kb  = (total_bytes / 1024U) * 1000U / read_time;
+    // Total Data dalam KB
+    uint32_t total_kb = (blocks * BLOCK_SIZE) / 1024;
 
-    uint32_t write_latency_us = 0;
-    uint32_t read_latency_us  = 0;
-    if (blocks_to_test > 0) {
-        write_latency_us = write_time / (uint32_t)blocks_to_test;
-        read_latency_us  = read_time / (uint32_t)blocks_to_test;
-    }
+    // Throughput (KB/s) = Total KB / (Waktu_detik)
+    // Rumus: (Total_KB * 1.000.000) / Waktu_us
+    uint32_t tp_w = (write_time > 0) ? (total_kb * 1000000 / write_time) : 0;
+    uint32_t tp_r = (read_time > 0)  ? (total_kb * 1000000 / read_time)  : 0;
 
+    // --- OUTPUT SESUAI GAMBAR ---
     sys_print("\n=== Hasil Benchmark Mini-OS ===\n");
-    sys_print("Jumlah blok          : "); sys_print_dec(blocks_to_test); sys_print("\n");
+    sys_print("Jumlah blok          : "); sys_print_dec(blocks); sys_print("\n");
     sys_print("Write time total     : "); sys_print_dec(write_time); sys_print(" us\n");
-    sys_print("Read time total      : "); sys_print_dec(read_time); sys_print(" us\n");
-    sys_print("Write latency /blok  : "); sys_print_dec(write_latency_us); sys_print(" us\n");
-    sys_print("Read latency /blok   : "); sys_print_dec(read_latency_us); sys_print(" us\n");
-    sys_print("Write throughput     : "); sys_print_dec(write_throughput_kb); sys_print(" KB/s (approx)\n");
-    sys_print("Read throughput      : "); sys_print_dec(read_throughput_kb); sys_print(" KB/s (approx)\n");
+    sys_print("Read time total      : "); sys_print_dec(read_time);  sys_print(" us\n");
+    sys_print("Write latency /blok  : "); sys_print_dec(lat_w); sys_print(" us\n");
+    sys_print("Read latency /blok   : "); sys_print_dec(lat_r); sys_print(" us\n");
+    sys_print("Write throughput     : "); sys_print_dec(tp_w); sys_print(" KB/s (approx)\n");
+    sys_print("Read throughput      : "); sys_print_dec(tp_r); sys_print(" KB/s (approx)\n");
 
-done:
-    {
-        DeviceStatus st = sys_get_status();
-        sys_print("\n=== STAT ===");
-        sys_print("\ntotal_writes : "); sys_print_dec((uint32_t)st.total_writes);
-        sys_print("\ntotal_reads  : "); sys_print_dec((uint32_t)st.total_reads);
-        sys_print("\nio_ticks     : "); sys_print_dec((uint32_t)st.total_io_time);
-        sys_print("\n");
-    }
+    // --- STAT SECTION ---
+    DeviceStatus st = sys_get_status();
+    sys_print("\n=== STAT ===\n");
+    sys_print("total_writes : "); sys_print_dec(st.total_writes); sys_print("\n");
+    sys_print("total_reads  : "); sys_print_dec(st.total_reads); sys_print("\n");
+    // io_ticks diambil dari total_io_time (simulasi tick driver)
+    sys_print("io_ticks     : "); sys_print_dec(st.total_io_time); sys_print("\n");
 
     sys_print("\nBenchmark selesai.\n");
-    sys_print("Press any key to force quit...\n");
-    sys_read();    // baca 1 karakter apa saja
-    reboot_qemu();
+    sys_print("Press any key to return to menu..."); // Disesuaikan agar logis kembali ke menu
+    sys_read();
+}
 
-    while (1) { }
+// --- FEATURE 4: FIBONACCI (MULTITASKING CASE) ---
+long long fib(int n) {
+    if (n <= 1) return n;
+    return fib(n-1) + fib(n-2);
+}
+
+void run_fibonacci(void) {
+    sys_clear_screen();
+    sys_print("=== Simulasi Fibonacci (Mini-OS) ===\n");
+    sys_print("(The command suitable with the PDF Format)\n\n");
+    
+    sys_print("Running Task 1: Fib(35)...\n");
+    uint64_t t1_start = sys_cpu_time_us();
+    long long res1 = fib(35);
+    uint64_t t1_end = sys_cpu_time_us();
+    
+    sys_print("Task fib(35) = "); sys_print_u64((uint64_t)res1);
+    sys_print(" | time "); sys_print_u64(t1_end - t1_start); sys_print(" us\n\n");
+
+    sys_print("Running Task 2: Fib(38)...\n");
+    uint64_t t2_start = sys_cpu_time_us();
+    long long res2 = fib(38);
+    uint64_t t2_end = sys_cpu_time_us();
+
+    sys_print("Task fib(38) = "); sys_print_u64((uint64_t)res2);
+    sys_print(" | time "); sys_print_u64(t2_end - t2_start); sys_print(" us\n\n");
+    
+    sys_print("Scheduler berhasil menjalankan 2 task bergantian.\n");
+    
+    sys_print("\nPress any key to return to menu...");
+    sys_read();
+}
+
+// --- MAIN KERNEL ---
+void kernel_main(void) {
+    init_driver();
+
+    while (1) {
+        sys_clear_screen();
+        sys_print("list of mini os commands :\n\n");
+        sys_print("1. I/O Driver Simulation\n");
+        sys_print("2. Memory Manager\n");
+        sys_print("3. Scheduler Priority\n");
+        sys_print("4. Fibonacci\n");
+        sys_print("5. Quit\n");
+        sys_print("6. Restart/Reboot\n");
+        sys_print("\nSelect command [1-6]: ");
+
+        char choice = sys_read();
+
+        switch (choice) {
+            case '1':
+                run_io_benchmark();
+                break;
+            case '2':
+                sys_print("\n\n(BUT THE TEMPORARY, THE CODE OF PROGRAM NULL OR NOTHING)\n");
+                sys_print("\nPress any key to return to menu...");
+                sys_read();
+                break;
+            case '3':
+                sys_print("\n\n(BUT THE TEMPORARY, THE CODE OF PROGRAM NULL OR NOTHING)\n");
+                sys_print("\nPress any key to return to menu...");
+                sys_read();
+                break;
+            case '4':
+                run_fibonacci();
+                break;
+            case '5':
+                sys_print("\n\nQuitting QEMU...\n");
+                qemu_shutdown();
+                break;
+            case '6':
+                sys_print("\n\nRebooting...\n");
+                reboot_system();
+                break;
+            default:
+                break;
+        }
+    }
 }

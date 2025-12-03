@@ -1,32 +1,65 @@
 #include <stdint.h>
 #include "driver.h"
 
+/* --- FIX: 64-BIT MATH HELPERS FOR 32-BIT SYSTEM --- */
+// GCC membutuhkan fungsi ini untuk pembagian/modulus uint64_t di mode 32-bit tanpa stdlib
+// Wajib ada untuk kalkulasi waktu Fibonacci
+uint64_t __udivdi3(uint64_t n, uint64_t d) {
+    uint64_t q = 0, r = 0;
+    for (int i = 63; i >= 0; i--) {
+        r <<= 1;
+        if ((n >> i) & 1) r |= 1;
+        if (r >= d) {
+            r -= d;
+            q |= (1ULL << i);
+        }
+    }
+    return q;
+}
+
+uint64_t __umoddi3(uint64_t n, uint64_t d) {
+    uint64_t r = 0;
+    for (int i = 63; i >= 0; i--) {
+        r <<= 1;
+        if ((n >> i) & 1) r |= 1;
+        if (r >= d) {
+            r -= d;
+        }
+    }
+    return r;
+}
+/* -------------------------------------------------- */
+
 /* VGA TEXT MODE */
 static uint16_t *const VGA_BUFFER = (uint16_t *)0xB8000;
 static int cursor_row = 0;
 static int cursor_col = 0;
-static const uint8_t VGA_ATTR = 0x0F;
+static const uint8_t VGA_ATTR = 0x0F; // White text on Black background
 
-static void putchar_at(char c, int row, int col) {
-    VGA_BUFFER[row * 80 + col] = ((uint16_t)VGA_ATTR << 8) | (uint8_t)c;
-}
 static void scroll() {
-    // pindahkan semua baris ke atas
     for (int row = 1; row < 25; row++) {
         for (int col = 0; col < 80; col++) {
             VGA_BUFFER[(row - 1) * 80 + col] = VGA_BUFFER[row * 80 + col];
         }
     }
-    // kosongkan baris terakhir
     for (int col = 0; col < 80; col++) {
         VGA_BUFFER[(24 * 80) + col] = ((uint16_t)VGA_ATTR << 8) | ' ';
     }
+}
+
+static void putchar_at(char c, int row, int col) {
+    VGA_BUFFER[row * 80 + col] = ((uint16_t)VGA_ATTR << 8) | (uint8_t)c;
 }
 
 static void vga_putc(char c) {
     if (c == '\n') {
         cursor_row++;
         cursor_col = 0;
+    } else if (c == '\r') {
+        cursor_col = 0;
+    } else if (c == '\b') {
+        if (cursor_col > 0) cursor_col--;
+        putchar_at(' ', cursor_row, cursor_col);
     } else {
         putchar_at(c, cursor_row, cursor_col);
         cursor_col++;
@@ -35,14 +68,11 @@ static void vga_putc(char c) {
             cursor_row++;
         }
     }
-
-    // if out of screen → scroll
     if (cursor_row >= 25) {
         scroll();
         cursor_row = 24;
     }
 }
-
 
 void driver_clear_screen(void) {
     for (int i = 0; i < 80*25; i++) {
@@ -57,17 +87,28 @@ void driver_write(const char *s) {
 }
 
 void driver_write_dec(uint32_t v) {
+    if (v == 0) { driver_write("0"); return; }
     char buf[16];
     int i = 0;
-    if (v == 0) { driver_write("0"); return; }
-    while (v > 0 && i < 15) {
+    while (v > 0) {
         buf[i++] = '0' + (v % 10);
         v /= 10;
     }
     while (i > 0) vga_putc(buf[--i]);
 }
 
-/* VIRTUAL BLOCK DEVICE */
+void driver_write_u64(uint64_t v) {
+    if (v == 0) { driver_write("0"); return; }
+    char buf[32];
+    int i = 0;
+    while (v > 0) {
+        buf[i++] = '0' + (v % 10);
+        v /= 10;
+    }
+    while (i > 0) vga_putc(buf[--i]);
+}
+
+/* VIRTUAL BLOCK DEVICE SIMULATION */
 static uint8_t vdisk[BLOCK_SIZE * BLOCK_COUNT];
 static DeviceStatus dev_stat;
 static uint32_t fake_time_us = 0;
@@ -81,7 +122,6 @@ void init_driver(void) {
     fake_time_us = 0;
 }
 
-/* low-level primitives */
 int io_write_block(int block, const uint8_t *data) {
     if (block < 0 || block >= BLOCK_COUNT) return -1;
     uint32_t base = (uint32_t)block * BLOCK_SIZE;
@@ -108,4 +148,13 @@ uint32_t driver_time_us(void) {
 
 DeviceStatus driver_status(void) {
     return dev_stat;
+}
+
+/* REAL CPU TIMER (RDTSC) */
+uint64_t get_cpu_time_us(void) {
+    uint32_t lo, hi;
+    __asm__ volatile ("rdtsc" : "=a" (lo), "=d" (hi));
+    uint64_t cycles = ((uint64_t)hi << 32) | lo;
+    // Estimasi: Dibagi 2000 untuk konversi kasar tick ke microsecond pada QEMU TCG
+    return cycles / 2000; 
 }
