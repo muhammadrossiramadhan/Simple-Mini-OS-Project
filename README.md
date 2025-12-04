@@ -1,279 +1,104 @@
-# TUGAS PROYEK AKHIR ORGANISASI DAN ARSITEKTUR KOMPUTER
+![Simple-Mini-OS-Project](./src/ascii.png)
 
-## 🎯 **Judul Final Project**
+## [Overview]
 
-**“Perancangan Mini Operating System Kernel dan Evaluasi Performa pada Satu Studi Kasus Nyata terhadap Sistem Operasi Modern”**
+Simple-Mini-OS-Project adalah proyek untuk membuat *mini OS* dengan kernel sederhana yang mendukung driver simulasi dan system call minimal. Proyek ini dijalankan di `QEMU` emulator (32-bit; untuk mempermudah development) dan dapat digunakan untuk melakukan benchmark performa dibandingkan OS modern seperti Linux, Windows, atau Android.
 
----
+Fitur utama:
 
-### 🧩 **Gambaran Umum Project**
+- Driver simulasi untuk I/O virtual
+- System call minimal:
+  - `print` —> menampilkan teks ke layar
+  - `read` —> membaca input
+  - `allocate` —> alokasi memori sederhana
+  - `create_task` —> membuat task baru
+- Logging hasil benchmark:
+  - Waktu akses file
+  - Total execution time
+- Menampilkan boot screen mini OS
+- Task execution sederhana
 
-Mahasiswa diminta melakukan 3 hal besar:
+## [Project Structure]
 
-### 1️⃣ **Mendesain Mini OS (Kernel Sederhana)**
+Simple-Mini-OS-Project \
+├── boot\
+│   └── grub\
+│       └── grub.cfg\
+├── build\
+│   ├── boot.o\
+│   ├── driver.o\
+│   ├── kernel.bin\
+│   ├── kernel.o\
+│   ├── keyboard.o\
+│   ├── scheduler.o\
+│   └── syscall.o\
+├── iso\
+│   └── boot\
+│       ├── grub\
+│       │   └── grub.cfg\
+│       └── kernel.bin\
+├── kernel\
+│   ├── boot.s\
+│   ├── driver.c\
+│   ├── driver.h\
+│   ├── kernel.c\
+│   ├── keyboard.c\
+│   ├── keyboard.h\
+│   ├── linker.ld\
+│   ├── reboot.h\
+│   ├── scheduler.c\
+│   ├── scheduler.h\
+│   ├── syscall.c\
+│   └── syscall.h\
+├── Makefile\
+├── mini-os.iso\
+├── minios_memory\
+│   ├── main.c\
+│   ├── memory_manager.c\
+│   ├── memory_manager.h\
+│   └── program.exe\
+└── README.md
 
-Komponen minimal yang wajib dibuat:
+## [Direct Download]
 
-* **Task Scheduler** (round robin / priority queue)
-* **Memory Manager sederhana** (static allocation / simple paging simulation)
-* **Driver simulasi** (I/O virtual)
-* **System call minimal** (print, read, allocate, create_task)
+- [Latest release (v1.0.0)](https://github.com/muhammadrossiramadhan/Simple-Mini-OS-Project/releases/tag/v1.0.0 "Open Release")
 
-Mini OS dibuat dalam:
+## [Manual Build]
 
-* **C** dan dijalankan di:
+0. **Dependencies**:
+   - `WSL` (Windows Subsystem for Linux)
+   - `GCC` & `NASM` — untuk compile kernel
+   - `LD` (linker) — untuk linking binary
+   - `QEMU` (32-bit) — untuk menjalankan mini-OS
+   - `GRUB/GRUB2` — membuat bootable ISO
+   - `xorriso` — membuat ISO bootable
 
-  * **Raspbian baremetal**
-  * **QEMU emulator**
-  * **x86 / ARM simulator**
+1. **Clone repository** \
+   Buka terminal lalu jalankan:
+   ```
+   git clone https://github.com/muhammadrossiramadhan/Simple-Mini-OS-Project.git
+   ```
 
-Atau untuk yang lebih ringan:
+2. **Masuk ke directory repository**
+   ```
+   cd Simple-Mini-OS-Project
+   ```
 
-* **NachOS**
-* **XV6 Lab**
-* **OSDev baremetal starter**
-
----
-
-### 2️⃣ **Mengimplementasikan 1 Kasus Nyata**
-
-Mahasiswa memilih satu studi kasus, lalu **menjalankan program tersebut** di mini-OS dan **membandingkan performanya** di OS modern (Linux/Windows/Android).
-
-Contoh studi kasus:
-
-* Sorting 10.000 data
-* CPU-bound task (fibonacci, matrix multiplication)
-* I/O-bound task (file read/write simulasi)
-* Multitasking 3 proses kalkulasi
-* Simulasi server sederhana (request handling)
-* Image processing (grayscale)
-* Cryptography XOR/ Caesar
-* Thread concurrency test
-
-Program **harus dijalankan dua kali**:
-
-1. Di mini-OS buatan mahasiswa
-2. Di OS modern di laptop/PC
-   → Lalu dibandingkan performanya
-
----
-
-### 3️⃣ **Benchmark Sistem Operasi Modern**
-
-Mahasiswa menguji OS modern:
-
-* **Windows vs Linux**
-* **Linux vs Android**
-* **Ubuntu vs Arch**
-* **Linux baremetal vs VM**
-
-Parameter yang diukur:
-
-* Latency & throughput
-* Scheduling delay
-* Context switching time
-* File I/O time
-* Memory allocation time
-* Total execution time
-
----
-
-## 🛠️ **Output yang Harus Dikumpulkan**
-
-### 1. **Desain Mini OS**
-
-Berisi:
-
-* Diagram kernel
-* Scheduler design
-* Memory layout
-* System call table
-* Driver model
-
-### 2. **Kode Program**
-
-Contoh minimum:
-
-* `kernel.c`
-* `scheduler.c`
-* `memory.c`
-* `syscall.c`
-* `app.c` (program kasus)
-
-OS mahasiswa **tidak harus didesain sempurna**, tapi minimal menjalankan 1 atau lebih “task” secara terjadwal.
-
-### 3. **Simulasi / Eksekusi**
-
-Menggunakan:
-
-* QEMU (disarankan)
-* Bochs
-* VirtualBox minimal OS image
-* Raspberry Pi (opsional)
-
-Harus menunjukkan:
-
-* Boot screen mini OS
-* Task execution
-* Logging hasil benchmark
-
-### 4. **Benchmark OS Modern**
-
-Mahasiswa menjalankan program yang sama di:
-
-* Linux / Windows / Android
-  Lalu mengukur:
-* Execution time
-* Memory usage
-* Number of context switch (opsional)
-* CPU time
-
-### 5. **Analisis Perbandingan**
-
-Mahasiswa harus menjawab:
-
-* Mengapa OS modern jauh lebih cepat?
-* Apa keterbatasan desain OS buatan?
-* Mana OS modern yang “terbaik” untuk kasus mereka?
+3. **Build kernel dan ISO** \
+   Pastikan `Makefile` sudah tersedia, lalu jalankan:
+   ```
+   make clean; make && make run
+   ```
 
 ---
 
-## 📘 **Struktur Laporan Akhir**
+### Rencana Pengembangan (Future Plan)
 
-1. **Pendahuluan**
-   – Alasan menguji OS modern
-2. **Desain Mini OS**
-   – Arsitektur kernel, scheduler, memory
-3. **Implementasi Kode**
-   – Penjelasan modul
-4. **Studi Kasus**
-   – Program real to run
-5. **Evaluasi & Benchmark**
-   – Tabel performa
-   – Windows vs Linux vs OS Buatan
-6. **Diskusi**
-   – Analisis OS mana yang paling optimal
-   – Kelebihan/kekurangan tiap OS
-7. **Kesimpulan**
-   – Pemilihan OS terbaik untuk case
+Beberapa pengembangan yang bisa dilakukan pada proyek Mini OS ini di masa depan:
+- Menambah fitur sederhana seperti menu awal atau command kecil.
+- Menambahkan komentar pada kode untuk mempermudah pembelajaran. (Agar lebih informatif)
 
----
+### *Notes
 
-## 🚀 **Contoh Case Final Project**
-
-Berikut 5 contoh studi kasus nyata untuk dipilih mahasiswa:
-
----
-
-#### **1️⃣ OS untuk Multitasking Kalkulasi Fibonacci**
-
-Mahasiswa:
-
-* Membuat 3 task
-* Scheduler round robin
-* Mengukur konteks switching
-* Membandingkan runtime vs Linux
-
----
-
-#### **2️⃣ OS untuk Sorting Task (Multi-task Sorting)**
-
-2 proses sorting jalan paralel.
-Ukuran data 10.000 elemen.
-
-Uji:
-
-* Task switch time
-* Memory allocation time
-
----
-
-#### **3️⃣ OS untuk File I/O Simulation**
-
-Membuat driver I/O virtual:
-
-* write
-* read
-
-Bandingkan kecepatan file I/O mini-OS vs Linux.
-
----
-
-#### **4️⃣ OS untuk Server Mini (Request Handler)**
-
-Simulasi server menangani:
-
-* 50 request dummy
-* Menggunakan queue
-
-Compare dengan server mini di Linux.
-
----
-
-#### **5️⃣ OS untuk Image Processing**
-
-Program berjalan di kernel:
-
-* grayscale
-* thresholding
-
-Compare hasil & speed.
-
----
-
-## 🧪 **Rubrik Penilaian (opsional, bisa saya buatkan versi tabel)**
-
-* Arsitektur OS (25%)
-* Implementasi kode (25%)
-* Studi kasus + program (20%)
-* Benchmark & analisis (20%)
-* Presentasi (10%)
-
-# PEMBAGIAN TUGAS KELOMPOK 1 OAK
-
-*1. Desain kernel dan Diagram* :
-Deskripsi : *Membuat desain arsitektur kernel dan diagramnya.*
-
-1. Naufal
-2. Totti
-3. rossi
-4. Davar
-
-*2. Scheduler Design & Coding* :
-Deskripsi : *Membuat scheduler (round robin / priority queue)*
-
-1. Salman
-2.zaidan
-3.
-
-*3. Memory Manager & Layout*
-Deskripsi : *Implementasi manajemen memori sederhana*
-
-1. Wildan
-2. Yaya
-
-*4. System Call*
-Deskripsi : *Membuat dan mengatur system calls minimal (print, read)*
-
-1. Rafa
-2. Wicak
-
-*5. Driver Model*
-Deskripsi : *Membuat driver I/O virtual (simulasi baca/tulis)*
-
-1. Rossi
-2. Shofi
-
-*6. Studi Kasus Program*
-Deksripsi : *Membuat program studi kasus nyata yang akan diuji*
-
-1. zhulva 
-2. ame
-
-*7. Benchmark dan Pengujian*
-Deksripsi : *Menjalankan program di mini OS dan OS modern, ukur metric*
-
-1. Davar
-2. Nova
-
-# DEADLINE :  15 Desember 2025
+*Mini-OS ini menggunakan GRUB sebagai bootloader.
+Struktur proyek modular untuk memudahkan pengembangan driver atau system call tambahan.*

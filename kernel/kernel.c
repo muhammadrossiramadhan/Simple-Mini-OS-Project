@@ -1,6 +1,8 @@
 #include "syscall.h"
 #include "reboot.h"
 #include <stdint.h>
+#include "scheduler.h"
+
 
 // --- HELPER FUNCTIONS ---
 
