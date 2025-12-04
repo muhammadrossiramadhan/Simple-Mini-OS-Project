@@ -12,18 +12,20 @@ typedef struct {
     uint32_t total_io_time;
 } DeviceStatus;
 
-/* low-level driver API (implemented in driver.c) */
+/* Driver API */
 void init_driver(void);
 void driver_clear_screen(void);
 void driver_write(const char *s);
 void driver_write_dec(uint32_t v);
+void driver_write_u64(uint64_t v); 
 
-/* low-level block I/O primitives (driver-level, not syscall) */
+/* Block I/O */
 int io_write_block(int block, const uint8_t *buf);
 int io_read_block(int block, uint8_t *buf);
 
-/* driver status/time access */
-uint32_t driver_time_us(void);
+/* Timer & Status */
+uint32_t driver_time_us(void);   // Disk Time
+uint64_t get_cpu_time_us(void);  // CPU Time
 DeviceStatus driver_status(void);
 
 #endif

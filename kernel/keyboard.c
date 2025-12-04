@@ -58,6 +58,7 @@ char keyboard_getchar() {
             case 0x39: return ' ';   // space
             case 0x0C: return '-';   // minus
             case 0x0D: return '=';
+            case 0x0E: return '\b';  // backspace
 
             // ==== ENTER ====
             case 0x1C: return '\n';

@@ -1,31 +1,39 @@
 ENTRY(_start)
 
-SECTIONS {
-  . = 1M;
+SECTIONS
+{
+/* Kernel dimuat di 1MB */
+. = 0x00100000;
 
-  .multiboot :
-  {
-    KEEP(*(.multiboot))
-  }
+.multiboot :
+{
+	KEEP(*(.multiboot))
+}
 
-  .text :
-  {
-    *(.text*)
-  }
+.text :
+{
+	*(.text)
+	*(.text.*)
+}
 
-  .rodata :
-  {
-    *(.rodata*)
-  }
+.rodata :
+{
+	*(.rodata)
+	*(.rodata.*)
+}
 
-  .data :
-  { 
-    *(.data*)
-  }
+.data :
+{
+	*(.data)
+	*(.data.*)
+}
 
-  .bss :
-  {
-    *(COMMON)
-    *(.bss*)
-  }
+.bss :
+{
+	*(COMMON)
+	*(.bss)
+	*(.bss.*)
+}
+
+
 }
