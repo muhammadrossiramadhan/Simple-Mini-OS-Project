@@ -166,8 +166,8 @@ void kernel_main(void) {
         sys_print("2. Memory Manager\n");
         sys_print("3. Scheduler Priority\n");
         sys_print("4. Fibonacci\n");
-        sys_print("5. Quit\n");
-        sys_print("6. Restart/Reboot\n");
+        sys_print("5. Restart/Reboot\n");
+        sys_print("6. Quit\n");
         sys_print("\nSelect command [1-6]: ");
 
         char choice = sys_read();
@@ -190,13 +190,13 @@ void kernel_main(void) {
                 run_fibonacci();
                 break;
             case '5':
-                sys_print("\n\nQuitting QEMU...\n");
-                qemu_shutdown();
-                break;
-            case '6':
                 sys_print("\n\nRebooting...\n");
                 reboot_system();
                 break;
+            case '6':
+            sys_print("\n\nQuitting QEMU...\n");
+            qemu_shutdown();
+            break;
             default:
                 break;
         }
