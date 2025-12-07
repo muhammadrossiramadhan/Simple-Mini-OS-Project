@@ -294,6 +294,18 @@ const char* menu_items[] = {
 };
 #define MENU_COUNT 6
 
+void draw_logo() {
+    // Koordinat X=20, Y=2. Warna: Light Green (0x0A)
+    // Logo teks "MINI OS"
+    uint8_t color = vga_entry_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
+    
+    driver_write_at("  __  __ _       _    ___  ____  ", 22, 2, color);
+    driver_write_at(" |  \\/  (_)_ __ (_)  / _ \\/ ___| ", 22, 3, color);
+    driver_write_at(" | |\\/| | | '_ \\| | | | | \\___ \\ ", 22, 4, color);
+    driver_write_at(" | |  | | | | | | | | |_| |___) |", 22, 5, color);
+    driver_write_at(" |_|  |_|_|_| |_|_|  \\___/|____/ ", 22, 6, color);
+}
+
 void draw_menu(int selected_index) {
     // Judul
     driver_write_at("=== MINI OS MAIN MENU ===", 28, 5, vga_entry_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK));
@@ -330,6 +342,7 @@ void kernel_main(void) {
     while (running) {
         // 1. Gambar Menu
         sys_clear_screen(); // Atau optimasi hanya clear jika perlu
+        draw_logo();
         draw_menu(selected);
 
         // 2. Loop Input (Tunggu sampai user tekan tombol navigasi)
