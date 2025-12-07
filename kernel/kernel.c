@@ -1,3 +1,5 @@
+#include "driver.h"
+#include "keyboard.h"
 #include "syscall.h"
 #include "reboot.h"
 #include "scheduler.h"
@@ -280,46 +282,91 @@ void run_fibonacci(void) {
     sys_read();
 }
 
-// --- MAIN KERNEL ---
+
+// Daftar Menu
+const char* menu_items[] = {
+    "1. I/O Driver Simulation  ",
+    "2. Memory Manager         ",
+    "3. Task Priority Scheduler",
+    "4. Fibonacci Scheduler    ",
+    "5. Restart/Reboot         ",
+    "6. Quit                   "
+};
+#define MENU_COUNT 6
+
+void draw_menu(int selected_index) {
+    // Judul
+    driver_write_at("=== MINI OS MAIN MENU ===", 28, 5, vga_entry_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK));
+
+    for (int i = 0; i < MENU_COUNT; i++) {
+        uint8_t color;
+        int x_pos = 25;
+        int y_pos = 8 + i; // Mulai di baris 8
+
+        if (i == selected_index) {
+            // HIGHLIGHT: Text Hitam, Background Putih/Abu
+            color = vga_entry_color(VGA_COLOR_BLACK, VGA_COLOR_LIGHT_GREY);
+            // Tambahkan pointer visual
+            driver_write_at("-> ", x_pos - 3, y_pos, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK)); 
+        } else {
+            // NORMAL: Text Putih, Background Hitam
+            color = vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+            driver_write_at("   ", x_pos - 3, y_pos, color); // Hapus pointer lama
+        }
+        
+        driver_write_at(menu_items[i], x_pos, y_pos, color);
+    }
+    
+    // Instruksi di bawah
+    driver_write_at("Gunakan UP/DOWN untuk memilih, ENTER untuk ok", 18, 22, vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK));
+}
+
 void kernel_main(void) {
     init_driver();
+    
+    int selected = 0;
+    int running = 1;
 
-    while (1) {
-        sys_clear_screen();
-        sys_print("list of mini os commands :\n\n");
-        sys_print("1. I/O Driver Simulation\n");
-        sys_print("2. Memory Manager\n");
-        sys_print("3. Task Priority Scheduler\n");
-        sys_print("4. Fibonacci Scheduler\n"); // Menu Updated
-        sys_print("5. Restart/Reboot\n");
-        sys_print("6. Quit\n");
-        sys_print("\nSelect command [1-6]: ");
+    while (running) {
+        // 1. Gambar Menu
+        sys_clear_screen(); // Atau optimasi hanya clear jika perlu
+        draw_menu(selected);
 
-        char choice = sys_read();
+        // 2. Loop Input (Tunggu sampai user tekan tombol navigasi)
+        char key = 0;
+        while (key != (char)KEY_ENTER) {
+            key = sys_read(); // Panggil keyboard_getchar yang sudah diupdate
+            
+            if (key == (char)KEY_UP) {
+                selected--;
+                if (selected < 0) selected = MENU_COUNT - 1; // Wrap ke bawah
+                draw_menu(selected); // Redraw hanya menu agar tidak flickering
+            }
+            else if (key == (char)KEY_DOWN) {
+                selected++;
+                if (selected >= MENU_COUNT) selected = 0; // Wrap ke atas
+                draw_menu(selected);
+            }
+        }
 
-        switch (choice) {
-            case '1':
-                run_io_benchmark(); // Pastikan fungsi ini ada
+        // 3. Eksekusi Menu (User menekan ENTER)
+        sys_clear_screen(); // Bersihkan layar sebelum masuk fitur
+        
+        switch (selected) {
+            case 0: run_io_benchmark(); break;
+            case 1: run_memory_manager(); break;
+            case 2: run_priority_test(); break;
+            case 3: run_fibonacci(); break;
+            case 4: 
+                sys_print("Rebooting..."); 
+                reboot_system(); 
                 break;
-            case '2':
-                run_memory_manager();
-                break;
-            case '3':
-                run_priority_test();    
-                break;
-            case '4':
-                run_fibonacci(); // Panggil fungsi baru
-                break;
-            case '5':
-                sys_print("\nRebooting...\n");
-                reboot_system();
-                break;
-            case '6':
-                sys_print("\nQuitting...\n");
-                qemu_shutdown();
-                break;
-            default:
+            case 5: 
+                sys_print("Shutdown..."); 
+                qemu_shutdown(); 
                 break;
         }
+
+        // Setelah fitur selesai, loop akan kembali ke atas (redraw menu)
     }
 }

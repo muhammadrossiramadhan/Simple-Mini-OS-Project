@@ -5,6 +5,17 @@
 
 #define BLOCK_SIZE 4096
 #define BLOCK_COUNT 1000
+#define VGA_COLOR_BLACK 0
+#define VGA_COLOR_WHITE 15
+#define VGA_COLOR_LIGHT_GREY 7
+#define VGA_COLOR_GREEN 2
+
+// Gabungkan foreground dan background
+static inline uint8_t vga_entry_color(uint8_t fg, uint8_t bg) {
+    return fg | bg << 4;
+}
+
+void driver_write_at(const char *str, int x, int y, uint8_t color);
 
 typedef struct {
     uint32_t total_reads;

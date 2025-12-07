@@ -61,7 +61,11 @@ char keyboard_getchar() {
             case 0x0E: return '\b';  // backspace
 
             // ==== ENTER ====
-            case 0x1C: return '\n';
+            //case 0x1C: return '\n';
+
+            case 0x48: return (char)KEY_UP;   // Scancode Panah Atas
+            case 0x50: return (char)KEY_DOWN; // Scancode Panah Bawah
+            case 0x1C: return (char)KEY_ENTER; // Enter
         }
     }
 }

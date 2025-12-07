@@ -86,6 +86,15 @@ void driver_write(const char *s) {
     while (*s) vga_putc(*s++);
 }
 
+void driver_write_at(const char *str, int col, int row, uint8_t color) {
+    int offset = (row * 80) + col;
+    while (*str) {
+        VGA_BUFFER[offset] = (uint16_t)color << 8 | (uint8_t)*str;
+        str++;
+        offset++;
+    }
+}
+
 void driver_write_dec(uint32_t v) {
     if (v == 0) { driver_write("0"); return; }
     char buf[16];
