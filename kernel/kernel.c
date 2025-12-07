@@ -151,77 +151,53 @@ void run_memory_manager(void) {
 // --- FEATURE 3: PRIORITY SCHEDULER DEMO ---
 
 void task_priority_interactive(void* arg) {
-    int id = (int)arg; // Kita terima angka ID (1, 2, 3...)
-    
-    sys_print("   --> [EXEC] User Task #"); 
-    sys_print_dec(id);
-    
-    // Kita cek prioritas task ini (hanya untuk display info saja, logic tetap di scheduler)
-    // (Note: Di real OS, task tidak selalu tahu priority dia sendiri, tapi ini simulasi)
-    sys_print(" is running...\n");
-
-    // Simulasi kerja berat (Looping)
-    for(int i=0; i<300000; i++) { __asm__("nop"); }
-    
-    sys_print("   --> [DONE] User Task #"); 
-    sys_print_dec(id);
-    sys_print(" finished.\n");
+    int id = (int)arg;
+    sys_print("      (Executing Task ID #"); sys_print_dec(id); sys_print(")\n");
+    for(int i=0; i<300000; i++) { __asm__("nop"); } // Delay
 }
 
 void run_priority_test(void) {
     sys_clear_screen();
     sys_print("=== Interactive Priority Test ===\n");
-    sys_print("0 = LOW | 1 = NORMAL | 2 = HIGH\n\n");
+    sys_print("0=LOW | 1=NORMAL | 2=HIGH\n\n");
     
     init_scheduler();
 
-    // 1. Tanya jumlah task
-    sys_print("Berapa task yang mau dibuat? (Max 5): ");
+    sys_print("Berapa task? (Max 5): ");
     int count = read_int_from_user();
-
-    if (count <= 0) return;
-    if (count > 5) {
-        count = 5;
-        sys_print("\nMax limit 5. Set to 5.\n");
-    }
+    if (count > 5) count = 5;
     sys_print("\n");
 
-    // 2. Loop input priority untuk setiap task
     for (int i = 0; i < count; i++) {
-        sys_print("Set Priority Task #"); 
-        sys_print_dec(i + 1);
-        sys_print(" [0/1/2]: ");
-        
-        int p_val = read_int_from_user();
+        char name_buf[16];
+        int priority_val;
         TaskPriority prio;
 
-        // Mapping input angka ke Enum Priority
-        if (p_val == 2) {
-            prio = PRIORITY_HIGH;
-            sys_print("   -> Set to HIGH\n");
-        } else if (p_val == 0) {
-            prio = PRIORITY_LOW;
-            sys_print("   -> Set to LOW\n");
-        } else {
-            prio = PRIORITY_NORMAL;
-            sys_print("   -> Set to NORMAL\n");
-        }
+        // 1. INPUT NAMA
+        sys_print("Task #"); sys_print_dec(i+1); sys_print(" Name: ");
+        read_str_from_user(name_buf, 16); // Fungsi baru di utils
+        sys_print("\n");
 
-        // Masukkan ke Scheduler
-        // Kita kirim (i+1) sebagai ID task
-        create_task(task_priority_interactive, (void*)(i + 1), prio);
+        // 2. INPUT PRIORITY
+        sys_print("   Priority [0/1/2]: ");
+        priority_val = read_int_from_user();
+        sys_print("\n");
+
+        if (priority_val == 2) prio = PRIORITY_HIGH;
+        else if (priority_val == 0) prio = PRIORITY_LOW;
+        else prio = PRIORITY_NORMAL;
+
+        // 3. CREATE TASK DENGAN NAMA
+        create_task(task_priority_interactive, (void*)(i + 1), prio, name_buf);
     }
 
-    sys_print("\nSemua task masuk antrean.\n");
-    sys_print("Tekan Enter untuk melihat siapa yang jalan duluan...\n");
+    sys_print("\nTekan Enter untuk jalankan Scheduler...\n");
     sys_read();
 
-    sys_print("\n=== STARTING SCHEDULER ===\n");
-    // Di sinilah pembuktian terjadi!
+    sys_print("\n=== SCHEDULER START ===\n");
     scheduler_run();
 
-    sys_print("\nTest Selesai. Perhatikan urutannya.\n");
-    sys_print("Press any key to return...");
+    sys_print("\nSelesai. Press key to return.");
     sys_read();
 }
 
@@ -284,7 +260,7 @@ void run_fibonacci(void) {
         
         // Masukkan ke Scheduler
         // Kita kirim 'n' sebagai void* data
-        int id = create_task(fib_task_wrapper, (void*)n, PRIORITY_NORMAL);
+        int id = create_task(fib_task_wrapper, (void*)n, PRIORITY_NORMAL, "FibCalc");
         
         if (id == -1) {
             sys_print("   (Gagal: Antrean Penuh!)\n");
@@ -313,7 +289,7 @@ void kernel_main(void) {
         sys_print("list of mini os commands :\n\n");
         sys_print("1. I/O Driver Simulation\n");
         sys_print("2. Memory Manager\n");
-        sys_print("3. Scheduler Priority\n");
+        sys_print("3. Task Priority Scheduler\n");
         sys_print("4. Fibonacci Scheduler\n"); // Menu Updated
         sys_print("5. Restart/Reboot\n");
         sys_print("6. Quit\n");

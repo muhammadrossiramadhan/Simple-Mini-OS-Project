@@ -1,5 +1,6 @@
 #include "scheduler.h"
 #include "syscall.h" 
+#include "memory_manager.h"
 #include <stdint.h>
 
 static Task tasks[MAX_PROCESSES];
@@ -24,7 +25,7 @@ void init_scheduler() {
 }
 
 // Update fungsi create_task menerima 'prio'
-int create_task(TaskFunction func, void* data, TaskPriority prio) {
+int create_task(TaskFunction func, void* data, TaskPriority prio, const char* name) {
     if (task_count >= MAX_PROCESSES) {
         sys_print("[SCHED] ERROR: Max task limit reached.\n");
         return -1;
@@ -34,14 +35,24 @@ int create_task(TaskFunction func, void* data, TaskPriority prio) {
     tasks[task_count].state = TASK_READY;
     tasks[task_count].entry = func;
     tasks[task_count].data = data;
-    tasks[task_count].priority = prio; // SIMPAN PRIORITAS
+    tasks[task_count].priority = prio;
+    
+    // COPY NAMA (Manual loop atau k_memcpy)
+    // Kita pakai manual loop sederhana untuk aman, atau k_memcpy jika sudah yakin
+    int i = 0;
+    while(name[i] != 0 && i < 15) {
+        tasks[task_count].name[i] = name[i];
+        i++;
+    }
+    tasks[task_count].name[i] = 0; // Null terminate
 
-    sys_print("[SCHED] Created task ");
-    print_dec(task_count);
-    if (prio == PRIORITY_HIGH) sys_print(" (HIGH PRIORITY)");
-    else if (prio == PRIORITY_LOW) sys_print(" (LOW PRIORITY)");
-    else sys_print(" (NORMAL)");
-    sys_print(".\n");
+    sys_print("[SCHED] Created: \"");
+    sys_print(tasks[task_count].name);
+    sys_print("\"");
+    
+    if (prio == PRIORITY_HIGH) sys_print(" [HIGH]");
+    else if (prio == PRIORITY_LOW) sys_print(" [LOW]");
+    sys_print("\n");
 
     return task_count++;
 }
@@ -72,12 +83,14 @@ void scheduler_tick() {
     current = next;
     tasks[current].state = TASK_RUNNING;
 
-    sys_print("[SCHED] Running task "); print_dec(current);
-    
-    // Debug info biar kelihatan bedanya
-    if (tasks[current].priority == PRIORITY_HIGH) sys_print(" [VIP/HIGH]...\n");
+    // TAMPILKAN NAMA TASK SAAT RUNNING
+    sys_print("[RUN] \""); 
+    sys_print(tasks[current].name);
+    sys_print("\"");
+
+    if (tasks[current].priority == PRIORITY_HIGH) sys_print(" [HIGH]...\n");
     else if (tasks[current].priority == PRIORITY_LOW) sys_print(" [LOW]...\n");
-    else sys_print(" [NORMAL]...\n");
+    else sys_print("...\n");
 
     tasks[current].entry(tasks[current].data); 
 
