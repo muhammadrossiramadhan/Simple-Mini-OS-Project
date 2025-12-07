@@ -4,7 +4,7 @@
 #include "utils.h"
 #include <stdint.h>
 
-// --- FEATURE 1: I/O BENCHMARK (Fixed Output) ---
+// --- FEATURE 1: I/O BENCHMARK ---
 void run_io_benchmark(void) {
     sys_clear_screen();
     init_driver(); 
@@ -50,8 +50,8 @@ void run_io_benchmark(void) {
     sys_print("Read time total      : "); sys_print_dec(read_time);  sys_print(" us\n");
     sys_print("Write latency /blok  : "); sys_print_dec(lat_w); sys_print(" us\n");
     sys_print("Read latency /blok   : "); sys_print_dec(lat_r); sys_print(" us\n");
-    sys_print("Write throughput     : "); sys_print_dec(tp_w); sys_print(" KB/s (approx)\n");
-    sys_print("Read throughput      : "); sys_print_dec(tp_r); sys_print(" KB/s (approx)\n");
+    sys_print("Write throughput     : "); sys_print_dec(tp_w); sys_print(" kB/s (approx)\n");
+    sys_print("Read throughput      : "); sys_print_dec(tp_r); sys_print(" kB/s (approx)\n");
 
     DeviceStatus st = sys_get_status();
     sys_print("\n=== STAT ===\n");
@@ -64,61 +64,82 @@ void run_io_benchmark(void) {
     sys_read();
 }
 
-// --- FEATURE 4: FIBONACCI (MULTITASKING CASE - WITH INPUT) ---
+// --- HELPER FUNC (FIBONACCI) ---
 long long fib(int n) {
     if (n <= 1) return n;
     return fib(n-1) + fib(n-2);
 }
 
+// Fungsi Wrapper (Tetap sama seperti sebelumnya)
+void fib_task_wrapper(void* arg) {
+    int n = (int)arg; 
+    sys_print("   [Task] Calculating Fib("); 
+    sys_print_dec(n); sys_print(")...\n");
+    
+    uint64_t t_start = sys_cpu_time_us();
+    long long res = fib(n);
+    uint64_t t_end = sys_cpu_time_us();
+
+    sys_print("   [Done] Result: "); sys_print_u64((uint64_t)res);
+    sys_print(" | Time: "); sys_print_u64(t_end - t_start); 
+    sys_print(" us\n");
+}
+
+// --- FEATURE 4: MULTI-INPUT FIBONACCI ---
 void run_fibonacci(void) {
     sys_clear_screen();
-    sys_print("=== Simulasi Fibonacci (Mini-OS) ===\n");
-    sys_print("Multitasking Scheduler Test\n\n");
+    sys_print("=== Multi-Task Fibonacci Scheduler ===\n");
     
-    // Input Task 1
-    sys_print("Masukkan angka Fibonacci Task 1 (default 35): ");
-    int n1 = read_int_from_user();
-    if (n1 <= 0) {
-        n1 = 35;
-        sys_print("35\n");
+    // 1. Reset Scheduler (Bersihkan antrean lama)
+    init_scheduler();
+
+    // 2. Tanya user mau berapa tugas?
+    sys_print("Berapa angka yang ingin dihitung? (Max 5): ");
+    int count = read_int_from_user();
+
+    // Validasi input
+    if (count <= 0) {
+        sys_print("\nBatal. Tidak ada tugas yang dibuat.\n");
+        sys_read();
+        return;
+    }
+    if (count > 5) {
+        count = 5;
+        sys_print("\nKebanyakan. Dibatasi max 5 tugas.\n");
     } else {
         sys_print("\n");
     }
 
-    // Input Task 2
-    sys_print("Masukkan angka Fibonacci Task 2 (default 38): ");
-    int n2 = read_int_from_user();
-    if (n2 <= 0) {
-        n2 = 38;
-        sys_print("38\n");
-    } else {
-        sys_print("\n");
+    // 3. Loop meminta input angka untuk setiap tugas
+    for (int i = 0; i < count; i++) {
+        sys_print("Masukkan angka ke-"); 
+        sys_print_dec(i + 1); 
+        sys_print(": ");
+        
+        int n = read_int_from_user();
+        
+        // Validasi angka fibonacci agar tidak terlalu berat/nol
+        if (n <= 0) n = 10; // Default jika user asal enter
+        
+        // Masukkan ke Scheduler
+        // Kita kirim 'n' sebagai void* data
+        int id = create_task(fib_task_wrapper, (void*)n);
+        
+        if (id == -1) {
+            sys_print("   (Gagal: Antrean Penuh!)\n");
+        }
     }
-    
-    if (n1 > 42 || n2 > 42) {
-        sys_print("\n[Warning] Angka > 42 akan memakan waktu lama (rekursif)!\n");
-    }
 
-    sys_print("\n[SCHEDULER START]");
-    sys_print("\nRunning Task 1: Fib("); sys_print_dec(n1); sys_print(")...\n");
-    uint64_t t1_start = sys_cpu_time_us();
-    long long res1 = fib(n1);
-    uint64_t t1_end = sys_cpu_time_us();
-    
-    sys_print("Task fib("); sys_print_dec(n1); sys_print(") = "); sys_print_u64((uint64_t)res1);
-    sys_print(" | time "); sys_print_u64(t1_end - t1_start); sys_print(" us\n\n");
+    sys_print("\nSemua tugas sudah masuk antrean.\n");
+    sys_print("Tekan Enter untuk menjalankan Scheduler...");
+    sys_read();
 
-    sys_print("Running Task 2: Fib("); sys_print_dec(n2); sys_print(")...\n");
-    uint64_t t2_start = sys_cpu_time_us();
-    long long res2 = fib(n2);
-    uint64_t t2_end = sys_cpu_time_us();
+    // 4. Jalankan Scheduler
+    sys_print("\n\n=== STARTING SCHEDULER ===\n");
+    scheduler_run();
 
-    sys_print("Task fib("); sys_print_dec(n2); sys_print(") = "); sys_print_u64((uint64_t)res2);
-    sys_print(" | time "); sys_print_u64(t2_end - t2_start); sys_print(" us\n\n");
-    
-    sys_print("Scheduler berhasil menjalankan 2 task bergantian.\n");
-    
-    sys_print("\nPress any key to return to menu...");
+    sys_print("\nSemua perhitungan selesai.\n");
+    sys_print("Press any key to return to menu...");
     sys_read();
 }
 
@@ -132,7 +153,7 @@ void kernel_main(void) {
         sys_print("1. I/O Driver Simulation\n");
         sys_print("2. Memory Manager\n");
         sys_print("3. Scheduler Priority\n");
-        sys_print("4. Fibonacci\n");
+        sys_print("4. Fibonacci Scheduler\n"); // Menu Updated
         sys_print("5. Restart/Reboot\n");
         sys_print("6. Quit\n");
         sys_print("\nSelect command [1-6]: ");
@@ -141,29 +162,25 @@ void kernel_main(void) {
 
         switch (choice) {
             case '1':
-                run_io_benchmark();
+                run_io_benchmark(); // Pastikan fungsi ini ada
                 break;
             case '2':
-                sys_print("\n\n(BUT THE TEMPORARY, THE CODE OF PROGRAM NULL OR NOTHING)\n");
-                sys_print("\nPress any key to return to menu...");
-                sys_read();
+                sys_print("\n(Not Implemented)\n"); sys_read();
                 break;
             case '3':
-                sys_print("\n\n(BUT THE TEMPORARY, THE CODE OF PROGRAM NULL OR NOTHING)\n");
-                sys_print("\nPress any key to return to menu...");
-                sys_read();
+                sys_print("\n(Not Implemented)\n"); sys_read();
                 break;
             case '4':
-                run_fibonacci();
+                run_fibonacci(); // Panggil fungsi baru
                 break;
             case '5':
-                sys_print("\n\nRebooting...\n");
+                sys_print("\nRebooting...\n");
                 reboot_system();
                 break;
             case '6':
-            sys_print("\n\nQuitting QEMU...\n");
-            qemu_shutdown();
-            break;
+                sys_print("\nQuitting...\n");
+                qemu_shutdown();
+                break;
             default:
                 break;
         }

@@ -1,9 +1,10 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 
-#include <stdint.h>
+#define MAX_PROCESSES 10
 
-#define MAX_PROCESSES 16
+// PERBAIKAN 1: Tambah parameter (void* data)
+typedef void (*TaskFunction)(void* data);
 
 typedef enum {
     TASK_READY,
@@ -11,18 +12,19 @@ typedef enum {
     TASK_FINISHED
 } TaskState;
 
-typedef void (*TaskFunction)();
-
 typedef struct {
     int id;
     TaskState state;
     TaskFunction entry;
+    void* data; // PERBAIKAN 2: Tempat simpan data
 } Task;
 
 void init_scheduler();
-int create_task(TaskFunction func);
+
+// PERBAIKAN 3: create_task menerima argument data
+int create_task(TaskFunction func, void* data);
+
 void scheduler_run();
-void scheduler_tick();
 int get_running_task_id();
 
 #endif
