@@ -64,6 +64,50 @@ void run_io_benchmark(void) {
     sys_read();
 }
 
+// --- FEATURE 3: PRIORITY SCHEDULER DEMO ---
+
+void task_priority_demo(void* arg) {
+    char* name = (char*)arg; // Kita kirim string nama task
+    sys_print("   --> Executing: "); 
+    sys_print(name);
+    sys_print("\n");
+    
+    // Simulasi kerja sebentar
+    for(int i=0; i<200000; i++) { __asm__("nop"); }
+    
+    sys_print("   --> Finished: "); 
+    sys_print(name);
+    sys_print("\n");
+}
+
+void run_priority_test(void) {
+    sys_clear_screen();
+    sys_print("=== Priority Scheduling Test ===\n");
+    sys_print("Skenario: Kita masukkan Task LOW dulu, baru Task HIGH.\n");
+    sys_print("Harapan : Task HIGH menyalip antrean dan jalan duluan.\n\n");
+    
+    init_scheduler();
+
+    // 1. Masukkan Task Low Priority (Masuk duluan)
+    create_task(task_priority_demo, "Task A (Si Lambat - Low)", PRIORITY_LOW);
+    
+    // 2. Masukkan Task Low Priority lagi
+    create_task(task_priority_demo, "Task B (Si Santai - Low)", PRIORITY_LOW);
+
+    // 3. Masukkan Task HIGH Priority (Masuk belakangan)
+    create_task(task_priority_demo, "Task C (SI BOS - HIGH!)", PRIORITY_HIGH);
+
+    sys_print("\nTekan Enter untuk mulai berebut CPU...\n");
+    sys_read();
+
+    sys_print("\n=== STARTING SCHEDULER ===\n");
+    scheduler_run();
+
+    sys_print("\nLihat urutannya? Task C (High) jalan duluan!\n");
+    sys_print("Press any key to return...");
+    sys_read();
+}
+
 // --- HELPER FUNC (FIBONACCI) ---
 long long fib(int n) {
     if (n <= 1) return n;
@@ -123,7 +167,7 @@ void run_fibonacci(void) {
         
         // Masukkan ke Scheduler
         // Kita kirim 'n' sebagai void* data
-        int id = create_task(fib_task_wrapper, (void*)n);
+        int id = create_task(fib_task_wrapper, (void*)n, PRIORITY_NORMAL);
         
         if (id == -1) {
             sys_print("   (Gagal: Antrean Penuh!)\n");
@@ -168,7 +212,7 @@ void kernel_main(void) {
                 sys_print("\n(Not Implemented)\n"); sys_read();
                 break;
             case '3':
-                sys_print("\n(Not Implemented)\n"); sys_read();
+                run_priority_test();    
                 break;
             case '4':
                 run_fibonacci(); // Panggil fungsi baru

@@ -3,7 +3,13 @@
 
 #define MAX_PROCESSES 10
 
-// PERBAIKAN 1: Tambah parameter (void* data)
+// 1. Definisikan Level Prioritas
+typedef enum {
+    PRIORITY_LOW    = 0,
+    PRIORITY_NORMAL = 1,
+    PRIORITY_HIGH   = 2
+} TaskPriority;
+
 typedef void (*TaskFunction)(void* data);
 
 typedef enum {
@@ -16,13 +22,14 @@ typedef struct {
     int id;
     TaskState state;
     TaskFunction entry;
-    void* data; // PERBAIKAN 2: Tempat simpan data
+    void* data;
+    TaskPriority priority; // 2. Tambahkan kolom prioritas
 } Task;
 
 void init_scheduler();
 
-// PERBAIKAN 3: create_task menerima argument data
-int create_task(TaskFunction func, void* data);
+// 3. Update create_task untuk menerima parameter priority
+int create_task(TaskFunction func, void* data, TaskPriority prio);
 
 void scheduler_run();
 int get_running_task_id();

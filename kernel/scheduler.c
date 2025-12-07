@@ -15,15 +15,16 @@ void init_scheduler() {
         tasks[i].id = -1;
         tasks[i].state = TASK_FINISHED;
         tasks[i].entry = 0;
-        tasks[i].data = 0; // Reset data
+        tasks[i].data = 0;
+        tasks[i].priority = PRIORITY_LOW;
     }
     task_count = 0;
     current = -1;
     sys_print("[SCHED] Initialized.\n");
 }
 
-// PERBAIKAN: Terima parameter data dan simpan ke struct
-int create_task(TaskFunction func, void* data) {
+// Update fungsi create_task menerima 'prio'
+int create_task(TaskFunction func, void* data, TaskPriority prio) {
     if (task_count >= MAX_PROCESSES) {
         sys_print("[SCHED] ERROR: Max task limit reached.\n");
         return -1;
@@ -32,23 +33,36 @@ int create_task(TaskFunction func, void* data) {
     tasks[task_count].id = task_count;
     tasks[task_count].state = TASK_READY;
     tasks[task_count].entry = func;
-    tasks[task_count].data = data; // SIMPAN DATA DI SINI
+    tasks[task_count].data = data;
+    tasks[task_count].priority = prio; // SIMPAN PRIORITAS
 
     sys_print("[SCHED] Created task ");
     print_dec(task_count);
+    if (prio == PRIORITY_HIGH) sys_print(" (HIGH PRIORITY)");
+    else if (prio == PRIORITY_LOW) sys_print(" (LOW PRIORITY)");
+    else sys_print(" (NORMAL)");
     sys_print(".\n");
 
     return task_count++;
 }
 
+// LOGIKA BARU: PRIORITY SCHEDULING
 static int pick_next_task() {
-    if (task_count == 0) return -1;
-    for (int i = 1; i <= task_count; i++) {
-        int idx = (current + i) % task_count;
-        if (tasks[idx].state == TASK_READY)
-            return idx;
+    int best_candidate = -1;
+    int highest_prio_found = -1; // -1 lebih kecil dari PRIORITY_LOW (0)
+
+    // Cek semua task, cari yang READY dengan prioritas TERTINGGI
+    for (int i = 0; i < task_count; i++) {
+        if (tasks[i].state == TASK_READY) {
+            // Jika ketemu task dengan prioritas lebih tinggi dari kandidat sebelumnya
+            if ((int)tasks[i].priority > highest_prio_found) {
+                highest_prio_found = tasks[i].priority;
+                best_candidate = i;
+            }
+        }
     }
-    return -1;
+
+    return best_candidate;
 }
 
 void scheduler_tick() {
@@ -58,11 +72,13 @@ void scheduler_tick() {
     current = next;
     tasks[current].state = TASK_RUNNING;
 
-    sys_print("[SCHED] Running task ");
-    print_dec(current);
-    sys_print("...\n");
+    sys_print("[SCHED] Running task "); print_dec(current);
+    
+    // Debug info biar kelihatan bedanya
+    if (tasks[current].priority == PRIORITY_HIGH) sys_print(" [VIP/HIGH]...\n");
+    else if (tasks[current].priority == PRIORITY_LOW) sys_print(" [LOW]...\n");
+    else sys_print(" [NORMAL]...\n");
 
-    // PERBAIKAN: Jalankan fungsi sambil melempar datanya
     tasks[current].entry(tasks[current].data); 
 
     tasks[current].state = TASK_FINISHED;
