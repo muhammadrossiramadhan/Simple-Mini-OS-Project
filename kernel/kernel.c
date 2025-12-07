@@ -66,44 +66,77 @@ void run_io_benchmark(void) {
 
 // --- FEATURE 3: PRIORITY SCHEDULER DEMO ---
 
-void task_priority_demo(void* arg) {
-    char* name = (char*)arg; // Kita kirim string nama task
-    sys_print("   --> Executing: "); 
-    sys_print(name);
-    sys_print("\n");
+void task_priority_interactive(void* arg) {
+    int id = (int)arg; // Kita terima angka ID (1, 2, 3...)
     
-    // Simulasi kerja sebentar
-    for(int i=0; i<200000; i++) { __asm__("nop"); }
+    sys_print("   --> [EXEC] User Task #"); 
+    sys_print_dec(id);
     
-    sys_print("   --> Finished: "); 
-    sys_print(name);
-    sys_print("\n");
+    // Kita cek prioritas task ini (hanya untuk display info saja, logic tetap di scheduler)
+    // (Note: Di real OS, task tidak selalu tahu priority dia sendiri, tapi ini simulasi)
+    sys_print(" is running...\n");
+
+    // Simulasi kerja berat (Looping)
+    for(int i=0; i<300000; i++) { __asm__("nop"); }
+    
+    sys_print("   --> [DONE] User Task #"); 
+    sys_print_dec(id);
+    sys_print(" finished.\n");
 }
 
 void run_priority_test(void) {
     sys_clear_screen();
-    sys_print("=== Priority Scheduling Test ===\n");
-    sys_print("Skenario: Kita masukkan Task LOW dulu, baru Task HIGH.\n");
-    sys_print("Harapan : Task HIGH menyalip antrean dan jalan duluan.\n\n");
+    sys_print("=== Interactive Priority Test ===\n");
+    sys_print("0 = LOW | 1 = NORMAL | 2 = HIGH\n\n");
     
     init_scheduler();
 
-    // 1. Masukkan Task Low Priority (Masuk duluan)
-    create_task(task_priority_demo, "Task A (Si Lambat - Low)", PRIORITY_LOW);
-    
-    // 2. Masukkan Task Low Priority lagi
-    create_task(task_priority_demo, "Task B (Si Santai - Low)", PRIORITY_LOW);
+    // 1. Tanya jumlah task
+    sys_print("Berapa task yang mau dibuat? (Max 5): ");
+    int count = read_int_from_user();
 
-    // 3. Masukkan Task HIGH Priority (Masuk belakangan)
-    create_task(task_priority_demo, "Task C (SI BOS - HIGH!)", PRIORITY_HIGH);
+    if (count <= 0) return;
+    if (count > 5) {
+        count = 5;
+        sys_print("\nMax limit 5. Set to 5.\n");
+    }
+    sys_print("\n");
 
-    sys_print("\nTekan Enter untuk mulai berebut CPU...\n");
+    // 2. Loop input priority untuk setiap task
+    for (int i = 0; i < count; i++) {
+        sys_print("Set Priority Task #"); 
+        sys_print_dec(i + 1);
+        sys_print(" [0/1/2]: ");
+        
+        int p_val = read_int_from_user();
+        TaskPriority prio;
+
+        // Mapping input angka ke Enum Priority
+        if (p_val == 2) {
+            prio = PRIORITY_HIGH;
+            sys_print("   -> Set to HIGH\n");
+        } else if (p_val == 0) {
+            prio = PRIORITY_LOW;
+            sys_print("   -> Set to LOW\n");
+        } else {
+            prio = PRIORITY_NORMAL;
+            sys_print("   -> Set to NORMAL\n");
+        }
+
+        // Masukkan ke Scheduler
+        // Kita kirim (i+1) sebagai ID task
+        create_task(task_priority_interactive, (void*)(i + 1), prio);
+    }
+
+    sys_print("\nSemua task masuk antrean.\n");
+    sys_print("Tekan Enter untuk melihat siapa yang jalan duluan...\n");
     sys_read();
 
     sys_print("\n=== STARTING SCHEDULER ===\n");
+    // Di sinilah pembuktian terjadi!
     scheduler_run();
 
-    sys_print("\nLihat urutannya? Task C (High) jalan duluan!\n");
+    sys_print("\nTest Selesai. Perhatikan urutannya.\n");
     sys_print("Press any key to return...");
     sys_read();
 }
