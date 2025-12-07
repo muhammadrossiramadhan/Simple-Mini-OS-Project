@@ -1,6 +1,7 @@
 #include "syscall.h"
 #include "reboot.h"
 #include "scheduler.h"
+#include "memory_manager.h"
 #include "utils.h"
 #include <stdint.h>
 
@@ -61,6 +62,89 @@ void run_io_benchmark(void) {
 
     sys_print("\nBenchmark selesai.\n");
     sys_print("Press any key to return to menu...");
+    sys_read();
+}
+
+// --- ADAPTASI DARI main.c ---
+void run_memory_manager(void) {
+    sys_clear_screen();
+    sys_print("=== MiniOS Memory Manager Demo ===\n\n");
+    
+    // 1. Initialize (Hanya perlu sekali sebenarnya, tapi untuk demo kita panggil)
+    // Jika sudah dipanggil di kernel_main, baris ini bisa dikomentari
+    // memory_init(); 
+    
+    // 2. Allocation Tests
+    sys_print("=== Allocation Tests ===\n");
+    
+    // Alloc Array Integer
+    int* numbers = (int*)kmalloc(10 * sizeof(int));
+    if (numbers) {
+        for (int i = 0; i < 10; i++) {
+            numbers[i] = i * i;
+        }
+        sys_print("   -> Numbers array allocated & filled.\n");
+    }
+
+    // Alloc String (Buffer)
+    char* text = (char*)kmalloc(100);
+    if (text) {
+        // Kita tidak punya strcpy, pakai k_memcpy atau manual
+        // Anggap saja kita isi manual string sederhana
+        char* msg = "Hello Memory!";
+        int len = 0; while(msg[len]) len++;
+        k_memcpy(text, msg, len + 1); // +1 untuk null terminator
+        
+        sys_print("   -> Text allocated: "); 
+        sys_print(text); 
+        sys_print("\n");
+    }
+    
+    // Alloc Zeroed (calloc)
+    char* zeros = (char*)kcalloc(50, sizeof(char));
+    if (zeros) {
+        sys_print("   -> Zero-initialized array created.\n");
+    }
+    
+    // 3. Get Statistics
+    memory_stats_t stats;
+    memory_get_stats(&stats);
+    
+    sys_print("\n=== Memory Statistics ===\n");
+    sys_print("Total Memory : "); sys_print_dec((uint32_t)stats.total_memory); sys_print(" bytes\n");
+    sys_print("Used Memory  : "); sys_print_dec((uint32_t)stats.used_memory); sys_print(" bytes\n");
+    sys_print("Free Memory  : "); sys_print_dec((uint32_t)stats.free_memory); sys_print(" bytes\n");
+    sys_print("Alloc Blocks : "); sys_print_dec((uint32_t)stats.allocated_blocks); sys_print("\n");
+    
+    // 4. Test Realloc
+    sys_print("\n=== Reallocation Test ===\n");
+    char* dynamic = (char*)kmalloc(10); // Kecil
+    if (dynamic) {
+        // Isi data awal "Hi"
+        dynamic[0] = 'H'; dynamic[1] = 'i'; dynamic[2] = 0;
+        sys_print("Before realloc: "); sys_print(dynamic); sys_print("\n");
+        
+        // Perbesar
+        dynamic = (char*)krealloc(dynamic, 50);
+        if (dynamic) {
+            // Tambah text manual karena ga ada strcat
+            dynamic[2] = ' '; dynamic[3] = 'M'; dynamic[4] = 'i'; dynamic[5] = 'n'; dynamic[6] = 'i'; dynamic[7] = 0;
+            sys_print("After realloc : "); sys_print(dynamic); sys_print("\n");
+        }
+        kfree(dynamic);
+    }
+    
+    // 5. Free Memory
+    sys_print("\n=== Freeing Memory ===\n");
+    kfree(numbers);
+    kfree(text);
+    kfree(zeros);
+    
+    // Cek statistik lagi setelah free
+    memory_get_stats(&stats);
+    sys_print("Used after free: "); sys_print_dec((uint32_t)stats.used_memory); sys_print(" bytes\n");
+    
+    sys_print("\nDemo completed. Press key to return.");
     sys_read();
 }
 
@@ -242,7 +326,7 @@ void kernel_main(void) {
                 run_io_benchmark(); // Pastikan fungsi ini ada
                 break;
             case '2':
-                sys_print("\n(Not Implemented)\n"); sys_read();
+                run_memory_manager();
                 break;
             case '3':
                 run_priority_test();    

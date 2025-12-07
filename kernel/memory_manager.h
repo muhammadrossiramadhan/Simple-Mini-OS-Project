@@ -1,12 +1,18 @@
 #ifndef MEMORY_MANAGER_H
 #define MEMORY_MANAGER_H
 
-#include <stddef.h>
 #include <stdint.h>
 
-#define MEMORY_SIZE 1024 * 1024  // 1MB total memory
-#define BLOCK_SIZE 256           // 256 bytes per block
-#define MAX_BLOCKS (MEMORY_SIZE / BLOCK_SIZE)
+// Definisi Tipe Data
+typedef uint32_t size_t;
+#define NULL ((void*)0)
+
+// UBAH NAMA agar tidak bentrok dengan driver.h
+#define MEM_SIZE        (1024 * 1024)  // 1MB
+#define MEM_BLOCK_SIZE  256            // Ganti nama dari BLOCK_SIZE
+#define MAX_MEM_BLOCKS  (MEM_SIZE / MEM_BLOCK_SIZE)
+
+// --- DEFINISI STRUCT (HARUS DI ATAS FUNCTION PROTOTYPES) ---
 
 // Memory block status
 typedef enum {
@@ -18,9 +24,9 @@ typedef enum {
 // Memory block descriptor
 typedef struct {
     block_status_t status;
-    size_t size;        // Size in bytes
-    void* physical_addr; // Physical address
-    uint32_t pid;       // Process ID (0 for system/kernel)
+    size_t size;         
+    void* physical_addr; 
+    uint32_t pid;        
 } memory_block_t;
 
 // Memory layout segments
@@ -51,20 +57,18 @@ typedef struct {
     size_t fragmentation;
 } memory_stats_t;
 
-// Function prototypes
+// --- FUNCTION PROTOTYPES ---
+
 void memory_init(void);
 void* kmalloc(size_t size);
 void* kcalloc(size_t num, size_t size);
-void kfree(void* ptr);
 void* krealloc(void* ptr, size_t size);
+void kfree(void* ptr);
 
 void memory_get_stats(memory_stats_t* stats);
-void memory_print_layout(void);
-void memory_print_blocks(void);
-size_t memory_get_available(void);
 
-// Helper functions
-int memory_validate_ptr(void* ptr);
-void memory_defragment(void);
+// Utilities (Tambahkan ini agar kernel.c bisa pakai)
+void* k_memset(void* ptr, int value, size_t num);
+void* k_memcpy(void* dest, const void* src, size_t n);
 
 #endif // MEMORY_MANAGER_H
