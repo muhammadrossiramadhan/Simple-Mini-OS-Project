@@ -4,11 +4,83 @@
 #include "reboot.h"
 #include "scheduler.h"
 #include "memory_manager.h"
+extern uint32_t total_allocated_memory;  // ← TAMBAH INI
 #include "utils.h"
 #include <stdint.h>
+#include <stdbool.h>
+#define MAX_HISTORY 32
+
+bool g_memory_ready = false;
+bool g_memory_full = false;
+uint32_t g_last_mem_kb = 0;
+
+// Fungsi utilitas untuk cek prasyarat memori
+void check_memory_prereq() {
+    if (!g_memory_ready) {
+        sys_clear_screen();
+        sys_print("======================================\n");
+        sys_print("       ERROR: MEMORY NOT INITIALIZED  \n");
+        sys_print("  Silakan jalankan Menu 2 dulu!       \n");
+        sys_print("======================================\n");
+        sys_print("\n[Press any key...]\n");
+        sys_read();
+        return;
+    }
+    if (g_memory_full) {
+        sys_clear_screen();
+        sys_print("======================================\n");
+        sys_print("          MEMORY FULL - STOP          \n");
+        sys_print("Hanya boleh 1x per cycle!            \n");
+        sys_print("Hapus History Log dulu via Menu 5     \n");
+        sys_print("======================================\n");
+        sys_print("\n[Press any key...]\n");
+        sys_read();
+        return;
+    }
+}
+
+// Mini dashboard untuk hasil operasi
+void show_operation_complete(const char* op_name) {
+    sys_clear_screen();
+    sys_print("======================================\n");
+    sys_print("          OPERATION COMPLETE          \n");
+    sys_print("======================================\n");
+    sys_print("Operation   : ");
+    sys_print(op_name);
+    sys_print("\nMemory Used : ");
+    sys_print_dec(g_last_mem_kb);
+    sys_print(" KB\n");
+    sys_print("History     : ");
+    sys_print_dec(MAX_HISTORY - history_available());
+    sys_print("/");
+    sys_print_dec(MAX_HISTORY);
+    sys_print("\nStatus     : MEMORY FULL (1x only)\n");
+    sys_print("======================================\n");
+    sys_print("[Press any key to History Log]\n");
+    sys_read();
+}
 
 // --- FEATURE 1: I/O BENCHMARK ---
 void run_io_benchmark(void) {
+    if (!g_memory_ready) {
+        sys_clear_screen();
+        sys_print("======================================\n");
+        sys_print("ERROR: Memory belum di-set\n");
+        sys_print("Jalankan Menu 2 dulu.\n");
+        sys_print("======================================\n");
+        sys_print("\n[Press any key...]\n");
+        sys_read();
+        return;
+    }
+    if (g_memory_full) {
+        sys_clear_screen();
+        sys_print("======================================\n");
+        sys_print("MEMORY FULL! Hapus history dulu.\n");
+        sys_print("======================================\n");
+        sys_print("\n[Press any key...]\n");
+        sys_read();
+        return;
+    }
     sys_clear_screen();
     init_driver(); 
     
@@ -64,91 +136,73 @@ void run_io_benchmark(void) {
 
     sys_print("\nBenchmark selesai.\n");
     sys_print("Press any key to return to menu...");
+    history_log("I/O Benchmark", total_kb * 1024);
+    if (history_available() <= 4) {
+    sys_print("\n[ALERT] History hampir penuh. Clear di HISTORY LOG.\n");
+    }
+
+    g_memory_full = true;
+    sys_print("MEMORY FULL - 1x only per cycle!\n");
+    
     sys_read();
+
+
+
 }
 
-// --- ADAPTASI DARI main.c ---
-void run_memory_manager(void) {
+// Revisi run_memory_manager dengan dashboard rapi
+void run_memory_manager() {
     sys_clear_screen();
-    sys_print("=== MiniOS Memory Manager Demo ===\n\n");
-    
-    // 1. Initialize (Hanya perlu sekali sebenarnya, tapi untuk demo kita panggil)
-    // Jika sudah dipanggil di kernel_main, baris ini bisa dikomentari
-    // memory_init(); 
-    
-    // 2. Allocation Tests
-    sys_print("=== Allocation Tests ===\n");
-    
-    // Alloc Array Integer
-    int* numbers = (int*)kmalloc(10 * sizeof(int));
-    if (numbers) {
-        for (int i = 0; i < 10; i++) {
-            numbers[i] = i * i;
-        }
-        sys_print("   -> Numbers array allocated & filled.\n");
-    }
+    sys_print("======================================\n");
+    sys_print("          MEMORY MANAGER SETUP        \n");
+    sys_print("======================================\n\n");
+    sys_print("Input memory size (KB, max 900): ");
 
-    // Alloc String (Buffer)
-    char* text = (char*)kmalloc(100);
-    if (text) {
-        // Kita tidak punya strcpy, pakai k_memcpy atau manual
-        // Anggap saja kita isi manual string sederhana
-        char* msg = "Hello Memory!";
-        int len = 0; while(msg[len]) len++;
-        k_memcpy(text, msg, len + 1); // +1 untuk null terminator
-        
-        sys_print("   -> Text allocated: "); 
-        sys_print(text); 
-        sys_print("\n");
+    uint32_t kbsize = read_int_from_user();
+    if (kbsize == 0) kbsize = 1;
+    if (kbsize > 900) kbsize = 900;
+
+    void* memblock = kmalloc(kbsize * 1024);
+    if (memblock) {
+        g_memory_ready = true;
+        g_memory_full = false;
+        g_last_mem_kb = kbsize;
+
+        memorystats_t st;
+        memory_get_stats(&st);
+
+        sys_clear_screen();
+        sys_print("======================================\n");
+        sys_print("        MEMORY ALLOCATION SUCCESS     \n");
+        sys_print("======================================\n");
+        sys_print("Requested    : ");
+        sys_print_dec(kbsize);
+        sys_print(" KB (");
+        sys_print_dec(kbsize * 1024);
+        sys_print(" B)\n");
+        sys_print("Total Used   : ");
+        sys_print_dec(st.used_memory / 1024);
+        sys_print(" KB\n");
+        sys_print("Free Space   : ");
+        sys_print_dec(st.free_memory / 1024);
+        sys_print(" KB\n");
+        sys_print("Status      : READY FOR OPERATIONS\n");
+        sys_print("======================================\n");
+        sys_print("[Press any key to continue...]\n");
+        sys_read();
+    } else {
+        sys_clear_screen();
+        sys_print("======================================\n");
+        sys_print("        MEMORY ALLOCATION FAILED      \n");
+        sys_print("======================================\n");
+        sys_print("Possible memory limit or history full.\n");
+        sys_print("[Press any key to continue...]\n");
+        sys_read();
     }
-    
-    // Alloc Zeroed (calloc)
-    char* zeros = (char*)kcalloc(50, sizeof(char));
-    if (zeros) {
-        sys_print("   -> Zero-initialized array created.\n");
-    }
-    
-    // 3. Get Statistics
-    memory_stats_t stats;
-    memory_get_stats(&stats);
-    
-    sys_print("\n=== Memory Statistics ===\n");
-    sys_print("Total Memory : "); sys_print_dec((uint32_t)stats.total_memory); sys_print(" bytes\n");
-    sys_print("Used Memory  : "); sys_print_dec((uint32_t)stats.used_memory); sys_print(" bytes\n");
-    sys_print("Free Memory  : "); sys_print_dec((uint32_t)stats.free_memory); sys_print(" bytes\n");
-    sys_print("Alloc Blocks : "); sys_print_dec((uint32_t)stats.allocated_blocks); sys_print("\n");
-    
-    // 4. Test Realloc
-    sys_print("\n=== Reallocation Test ===\n");
-    char* dynamic = (char*)kmalloc(10); // Kecil
-    if (dynamic) {
-        // Isi data awal "Hi"
-        dynamic[0] = 'H'; dynamic[1] = 'i'; dynamic[2] = 0;
-        sys_print("Before realloc: "); sys_print(dynamic); sys_print("\n");
-        
-        // Perbesar
-        dynamic = (char*)krealloc(dynamic, 50);
-        if (dynamic) {
-            // Tambah text manual karena ga ada strcat
-            dynamic[2] = ' '; dynamic[3] = 'M'; dynamic[4] = 'i'; dynamic[5] = 'n'; dynamic[6] = 'i'; dynamic[7] = 0;
-            sys_print("After realloc : "); sys_print(dynamic); sys_print("\n");
-        }
-        kfree(dynamic);
-    }
-    
-    // 5. Free Memory
-    sys_print("\n=== Freeing Memory ===\n");
-    kfree(numbers);
-    kfree(text);
-    kfree(zeros);
-    
-    // Cek statistik lagi setelah free
-    memory_get_stats(&stats);
-    sys_print("Used after free: "); sys_print_dec((uint32_t)stats.used_memory); sys_print(" bytes\n");
-    
-    sys_print("\nDemo completed. Press key to return.");
-    sys_read();
 }
+
+
+
 
 // --- FEATURE 3: PRIORITY SCHEDULER DEMO ---
 
@@ -159,6 +213,26 @@ void task_priority_interactive(void* arg) {
 }
 
 void run_priority_test(void) {
+    if (!g_memory_ready) {
+        sys_clear_screen();
+        sys_print("======================================\n");
+        sys_print("ERROR: Memory belum di-set\n");
+        sys_print("Jalankan Menu 2 dulu.\n");
+        sys_print("======================================\n");
+        sys_print("\n[Press any key...]\n");
+        sys_read();
+        return;
+    }
+    if (g_memory_full) {
+        sys_clear_screen();
+        sys_print("======================================\n");
+        sys_print("MEMORY FULL! Hapus history dulu.\n");
+        sys_print("======================================\n");
+        sys_print("\n[Press any key...]\n");
+        sys_read();
+        return;
+    }
+
     sys_clear_screen();
     sys_print("=== Interactive Priority Test ===\n");
     sys_print("0=LOW | 1=NORMAL | 2=HIGH\n\n");
@@ -200,7 +274,16 @@ void run_priority_test(void) {
     scheduler_run();
 
     sys_print("\nSelesai. Press key to return.");
+    history_log("Priority Scheduler", 0);
+    if (history_available() <= 4) {
+    sys_print("\n[ALERT] History hampir penuh. Clear di HISTORY LOG.\n");
+    }
+
+    g_memory_full = true;
+    sys_print("MEMORY FULL - 1x only per cycle!\n");
+
     sys_read();
+
 }
 
 // --- HELPER FUNC (FIBONACCI) ---
@@ -222,10 +305,32 @@ void fib_task_wrapper(void* arg) {
     sys_print("   [Done] Result: "); sys_print_u64((uint64_t)res);
     sys_print(" | Time: "); sys_print_u64(t_end - t_start); 
     sys_print(" us\n");
+
+    
 }
 
 // --- FEATURE 4: MULTI-INPUT FIBONACCI ---
 void run_fibonacci(void) {
+    if (!g_memory_ready) {
+        sys_clear_screen();
+        sys_print("======================================\n");
+        sys_print("ERROR: Memory belum di-set\n");
+        sys_print("Jalankan Menu 2 dulu.\n");
+        sys_print("======================================\n");
+        sys_print("\n[Press any key...]\n");
+        sys_read();
+        return;
+    }
+    if (g_memory_full) {
+        sys_clear_screen();
+        sys_print("======================================\n");
+        sys_print("MEMORY FULL! Hapus history dulu.\n");
+        sys_print("======================================\n");
+        sys_print("\n[Press any key...]\n");
+        sys_read();
+        return;
+    }
+
     sys_clear_screen();
     sys_print("=== Multi-Task Fibonacci Scheduler ===\n");
     
@@ -279,20 +384,57 @@ void run_fibonacci(void) {
 
     sys_print("\nSemua perhitungan selesai.\n");
     sys_print("Press any key to return to menu...");
+    history_log("Fibonacci Test", 0);
+    if (history_available() <= 4) sys_print("\n[ALERT] History hampir penuh. Clear di HISTORY LOG.\n");
+
+    g_memory_full = true;
+    sys_print("MEMORY FULL - 1x only per cycle!\n");
+
     sys_read();
+
+}
+
+// History dashboard dan penghapusan yang terintegrasi
+void run_history_dashboard() {
+    sys_clear_screen();
+    sys_print("======================================\n");
+    sys_print("         HISTORY LOG DASHBOARD        \n");
+    sys_print("======================================\n\n");
+
+    history_show();
+
+    sys_print("\n--------------------------------------\n");
+    sys_print("Slots Used: ");
+    sys_print_dec(MAX_HISTORY - history_available());
+    sys_print("/");
+    sys_print_dec(MAX_HISTORY);
+    sys_print("\nClear All History? [Y/N]: ");
+
+    char c = sys_read();
+    if (c == 'Y' || c == 'y') {
+        history_clear();
+        g_memory_full = false;
+        g_memory_ready = false;
+        memory_init();  // ← GANTI, panggil fungsi init yang sudah ada
+        sys_print("\n✓ History cleared! Memory unlocked.\n");
+        sys_print("[Press any key to continue...]\n");
+        sys_read();
+    }
 }
 
 
 // Daftar Menu
-const char* menu_items[] = {
-    "1. I/O Driver Simulation  ",
-    "2. Memory Manager         ",
-    "3. Task Priority Scheduler",
-    "4. Fibonacci Scheduler    ",
-    "5. Restart/Reboot         ",
-    "6. Quit                   "
+const char* menuItems[] = {
+    "1. I/O Benchmark",
+    "2. Memory Manager", 
+    "3. Priority Scheduler",
+    "4. Fibonacci Test",
+    "5. History Log",
+    "6. Reboot",
+    "7. Shutdown"
 };
-#define MENU_COUNT 6
+#define MENU_COUNT 7
+
 
 void draw_logo() {
     // Koordinat X=20, Y=2. Warna: Light Green (0x0A)
@@ -326,7 +468,8 @@ void draw_menu(int selected_index) {
             driver_write_at("   ", x_pos - 3, y_pos, color); // Hapus pointer lama
         }
         
-        driver_write_at(menu_items[i], x_pos, y_pos, color);
+        driver_write_at(menuItems[i], x_pos, y_pos, color);
+
     }
     
     // Instruksi di bawah
@@ -365,20 +508,17 @@ void kernel_main(void) {
         // 3. Eksekusi Menu (User menekan ENTER)
         sys_clear_screen(); // Bersihkan layar sebelum masuk fitur
         
-        switch (selected) {
+        switch(selected) {
             case 0: run_io_benchmark(); break;
             case 1: run_memory_manager(); break;
             case 2: run_priority_test(); break;
             case 3: run_fibonacci(); break;
-            case 4: 
-                sys_print("Rebooting..."); 
-                reboot_system(); 
-                break;
-            case 5: 
-                sys_print("Shutdown..."); 
-                qemu_shutdown(); 
-                break;
+            case 4: run_history_dashboard(); break;
+            case 5: reboot_system(); break;
+            case 6: qemu_shutdown(); break;
         }
+
+
 
         // Setelah fitur selesai, loop akan kembali ke atas (redraw menu)
     }
