@@ -61,7 +61,8 @@ Simple-Mini-OS-Project \
 
 ## [Direct Download]
 
-- [Latest release (v1.0.0)](https://github.com/muhammadrossiramadhan/Simple-Mini-OS-Project/releases/tag/v1.0.0 "Open Release")
+- [Latest release (v1.2.0)](https://github.com/muhammadrossiramadhan/Simple-Mini-OS-Project/releases/tag/v1.2.0 "Open Release")
+- [View all available version](https://github.com/muhammadrossiramadhan/Simple-Mini-OS-Project/releases "Open Release")
 
 ## [Manual Build]
 
