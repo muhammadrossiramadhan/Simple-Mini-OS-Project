@@ -5,8 +5,8 @@
 
 #define MEM_BLOCK_SIZE 256
 
-static uint8_t memory_pool[MEM_SIZE];
-static uint32_t total_allocated_memory = 0;
+uint8_t memory_pool[MEM_SIZE];
+uint32_t total_allocated_memory = 0;
 
 typedef struct {
     char label[32];

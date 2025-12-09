@@ -43,13 +43,13 @@ mini-os.iso: build/kernel.bin
 	mkdir -p iso/boot/grub
 	cp build/kernel.bin iso/boot/kernel.bin
 	cp boot/grub/grub.cfg iso/boot/grub/grub.cfg
-	/usr/bin/grub-mkrescue -o mini-os-v1.2.0.iso iso || /usr/bin/grub2-mkrescue -o mini-os-v1.2.0.iso iso
+	grub-mkrescue -o mini-os-v1.3.0.iso iso || grub2-mkrescue -o mini-os-v1.3.0.iso iso
 
 clean:
 	rm -rf build iso mini-os.iso
 
 run: mini-os.iso
-	qemu-system-i386 -cdrom mini-os-v1.2.0.iso -m 128M -boot d
+	qemu-system-i386 -cdrom mini-os-v1.3.0.iso -m 128M -boot d
 
 .PHONY: all clean
 
