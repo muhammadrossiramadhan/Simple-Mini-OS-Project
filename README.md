@@ -21,47 +21,53 @@ Fitur utama:
 ## [Project Structure]
 
 Simple-Mini-OS-Project \
-├── boot\
-│   └── grub\
-│       └── grub.cfg\
-├── build\
-│   ├── boot.o\
-│   ├── driver.o\
-│   ├── kernel.bin\
-│   ├── kernel.o\
-│   ├── keyboard.o\
-│   ├── scheduler.o\
-│   └── syscall.o\
-├── iso\
-│   └── boot\
-│       ├── grub\
-│       │   └── grub.cfg\
-│       └── kernel.bin\
-├── kernel\
-│   ├── boot.s\
-│   ├── driver.c\
-│   ├── driver.h\
-│   ├── kernel.c\
-│   ├── keyboard.c\
-│   ├── keyboard.h\
-│   ├── linker.ld\
-│   ├── reboot.h\
-│   ├── scheduler.c\
-│   ├── scheduler.h\
-│   ├── syscall.c\
-│   └── syscall.h\
-├── Makefile\
-├── mini-os.iso\
-├── minios_memory\
-│   ├── main.c\
-│   ├── memory_manager.c\
-│   ├── memory_manager.h\
-│   └── program.exe\
-└── README.md
+├── boot \
+│   └── grub \
+│       └── grub.cfg \
+├── build \
+│   ├── boot.o \
+│   ├── driver.o \
+│   ├── kernel.bin \
+│   ├── kernel.o \
+│   ├── keyboard.o \
+│   ├── memory_manager.o \
+│   ├── scheduler.o \
+│   ├── syscall.o \
+│   └── utils.o \
+├── ext \
+│   ├── fibonacci \
+│   └── fibonacci.c \
+├── iso \
+│   └── boot \
+│       ├── grub \
+│       │   └── grub.cfg \
+│       └── kernel.bin \
+├── kernel \
+│   ├── boot.s \
+│   ├── driver.c \
+│   ├── driver.h \
+│   ├── kernel.c \
+│   ├── keyboard.c \
+│   ├── keyboard.h \
+│   ├── linker.ld \
+│   ├── memory_manager.c \
+│   ├── memory_manager.h \
+│   ├── reboot.h \
+│   ├── scheduler.c \
+│   ├── scheduler.h \
+│   ├── syscall.c \
+│   ├── syscall.h \
+│   ├── utils.c \
+│   └── utils.h \
+├── Makefile \
+├── mini-os-v1.3.0.iso \
+├── README.md \
+└── src \
+    └── ascii.png
 
 ## [Direct Download]
 
-- [Latest release (v1.2.0)](https://github.com/muhammadrossiramadhan/Simple-Mini-OS-Project/releases/tag/v1.2.0 "Open Release")
+- [Latest release (v1.2.0)](https://github.com/muhammadrossiramadhan/Simple-Mini-OS-Project/releases/tag/v1.3.0 "Open Release")
 - [View all available version](https://github.com/muhammadrossiramadhan/Simple-Mini-OS-Project/releases "Open Release")
 
 ## [Manual Build]
