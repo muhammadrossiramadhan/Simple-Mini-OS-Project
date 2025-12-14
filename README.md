@@ -1,7 +1,7 @@
 ![Simple-Mini-OS-Project](./src/ascii.png)
 
 ## [Overview]
-
+![Language](https://img.shields.io/badge/Language-C-00599C?style=for-the-badge&logo=github&logoColor=white)![Language](https://img.shields.io/badge/asm-DD0000?style=for-the-badge&logoColor=white)
 Simple-Mini-OS-Project adalah proyek untuk membuat *mini OS* dengan kernel sederhana yang mendukung driver simulasi dan system call minimal. Proyek ini dijalankan di `QEMU` emulator (32-bit; untuk mempermudah development) dan dapat digunakan untuk melakukan benchmark performa dibandingkan OS modern seperti Linux, Windows, atau Android.
 
 Fitur utama:
@@ -63,7 +63,7 @@ Simple-Mini-OS-Project \
 ├── mini-os-v1.3.1.iso \
 ├── README.md \
 └── src \
-    └── ascii.png
+....└── ascii.png
 
 ## [Direct Download]
 
@@ -99,13 +99,12 @@ Simple-Mini-OS-Project \
 
 ---
 
-### Rencana Pengembangan (Future Plan)
+### [Future Plan]
 
 Beberapa pengembangan yang bisa dilakukan pada proyek Mini OS ini di masa depan:
 - Menambah fitur sederhana seperti menu awal atau command kecil.
 - Menambahkan komentar pada kode untuk mempermudah pembelajaran. (Agar lebih informatif)
 
-### *Notes
-
-*Mini-OS ini menggunakan GRUB sebagai bootloader.
-Struktur proyek modular untuk memudahkan pengembangan driver atau system call tambahan.*
+> [!TIP]
+> *Mini-OS ini menggunakan GRUB sebagai bootloader.
+> Struktur proyek modular untuk memudahkan pengembangan driver atau system call tambahan.*
