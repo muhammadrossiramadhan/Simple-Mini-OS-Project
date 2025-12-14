@@ -60,14 +60,14 @@ Simple-Mini-OS-Project \
 │   ├── utils.c \
 │   └── utils.h \
 ├── Makefile \
-├── mini-os-v1.3.0.iso \
+├── mini-os-v1.3.1.iso \
 ├── README.md \
 └── src \
     └── ascii.png
 
 ## [Direct Download]
 
-- [Latest release (v1.2.0)](https://github.com/muhammadrossiramadhan/Simple-Mini-OS-Project/releases/tag/v1.3.0 "Open Release")
+- [Latest release (v1.3.0)](https://github.com/muhammadrossiramadhan/Simple-Mini-OS-Project/releases/tag/v1.3.0 "Open Release")
 - [View all available version](https://github.com/muhammadrossiramadhan/Simple-Mini-OS-Project/releases "Open Release")
 
 ## [Manual Build]
